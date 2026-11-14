@@ -37,8 +37,10 @@ async def collect_findings() -> dict:
     tech = workspace.read_json("http_probe.json", {}) or {}  # tech + missing headers
     shodan = workspace.read_json("shodan.json", {}) or {}
     secrets = workspace.read_json("secrets.json", []) or []
+    nuclei = workspace.read_json("nuclei.json", []) or []
+    takeover = workspace.read_json("takeover.json", []) or []
 
-    if not (ports or tech or shodan or secrets):
+    if not (ports or tech or shodan or secrets or nuclei or takeover):
         return {
             "ok": False,
             "error": (
@@ -113,6 +115,24 @@ async def collect_findings() -> dict:
             "secret", ref=detector, severity="critical" if verified else "high",
             tool="secret_scan",
             evidence=("verified " if verified else "") + f"{detector}: {s.get('redacted', '')}",
+        ))
+
+    # --- nuclei template matches (severity comes from the template) -----
+    for r in nuclei:
+        items.append(findings.make_finding(
+            "nuclei", host=r.get("host", ""), ref=r.get("template", ""),
+            severity=(r.get("severity") or "info"), tool="vuln_scan",
+            evidence=f"{r.get('name', '')} @ {r.get('matched_at', '')}".strip(),
+        ))
+
+    # --- subdomain takeovers --------------------------------------------
+    for t in takeover:
+        cname = ", ".join(t.get("cname", []) or [])
+        items.append(findings.make_finding(
+            "takeover", host=t.get("host", ""),
+            ref=t.get("service", "") or t.get("template", ""), severity="high",
+            tool="takeover_check",
+            evidence=f"dangling CNAME ({cname}) → {t.get('service', 'unclaimed service')}",
         ))
 
     ordered = findings.save_findings(items)

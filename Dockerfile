@@ -98,6 +98,12 @@ RUN mkdir -p /workspace && chown recon:recon /workspace
 VOLUME ["/workspace"]
 
 USER recon
+
+# Pre-fetch nuclei templates (as the recon user, into its home) so the first
+# vuln_scan doesn't stall downloading ~hundreds of MB. Non-fatal if it can't
+# reach the network at build time — nuclei would then fetch at first run.
+RUN nuclei -update-templates 2>/dev/null || true
+
 ENV RECONGURU_TRANSPORT=stdio \
     PYTHONUNBUFFERED=1
 
