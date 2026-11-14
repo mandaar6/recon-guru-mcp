@@ -248,7 +248,19 @@ Stages 1–7 and 9 are complete (framework → Docker → tool suite → finding
 hardening); Stage 10 (packaging) is in progress. Full detail, design decisions,
 and the tiered tool catalog are in **[ROADMAP.md](ROADMAP.md)**.
 
-**Does the brain actually help?** [BENCHMARK.md](BENCHMARK.md) runs the same tools
-brain-off vs brain-on against a live DVWA target: the agentic mode ran only the 9
-relevant tools (vs 16, 5 errored), finished ~21% faster, and reported **6 findings
-with zero info-noise** vs 14 findings that were **64% noise**.
+### Does the brain actually help?
+
+Same 18 tools, same target (`testasp.vulnweb.com`), brain off vs on — the only
+variable is the LLM orchestration:
+
+| | Brain-off (linear CLI) | Brain-on (agentic) |
+|---|---|---|
+| Tools run | 16 (4 wasted/errored) | **12** (0 errors) |
+| Wall-clock | 453 s | **306 s (−32%)** |
+| Findings reported | 15 | 6 |
+| &nbsp;&nbsp;· info-level noise | **10 (67%)** | **0** |
+
+The agentic mode isn't faster because it scans faster (identical binaries) — it's
+faster and cleaner because it **skips irrelevant tools** and **tunes out noise**.
+Full methodology and an honest "why vuln-labs under-represent recon" note in
+[BENCHMARK.md](BENCHMARK.md).

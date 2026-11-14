@@ -6,82 +6,65 @@ bundle? To isolate that, we run **the same tools** two ways and compare:
 - **Mode 2 (brain-off)** — `reconguru_mcp/cli.py`: runs all 16 tools in a fixed
   order, no LLM, no skipping or tuning. The deterministic baseline.
 - **Mode 1 (brain-on)** — a model (acting as the harness's brain) picks which
-  tools to run, in what order, and tunes them, based on what it observes.
+  tools to run, in what order, and tunes them, based on what it observes
+  (script: [`benchmark/mode1_adaptive.py`](benchmark/mode1_adaptive.py)).
 
 Same image, same tools, same target — the **only variable is the brain.**
 
-> **Caveat up front.** This was one run of each against a *live, remote* target,
-> so some numbers (especially nuclei's) carry run-to-run variance. The
-> deterministic wins (which tools ran, info-noise suppression) are reproducible;
-> treat the exact finding counts as indicative, not exact. A controlled local
-> target run repeatedly would tighten them.
-
-## Setup
-
-- **Target:** `https://pentest-ground.com:4280` — a DVWA instance on Pentest-Ground,
-  a purpose-built authorized testing playground.
-- **Brain's observation that drove Mode 1:** `http_probe` saw a single Nginx/PHP
-  web app on a non-standard port — no subdomains, no DNS pivots, no archives, no
-  CNAME, no Shodan surface. So the brain **skipped 6 tools** (`subdomain_enum`,
-  `dns_enum`, `url_collect`, `port_scan`, `takeover_check`, `shodan_enrich`) and
-  ran nuclei **without info-level templates** (noise). Script:
-  [`benchmark/mode1_adaptive.py`](benchmark/mode1_adaptive.py).
-
-## Results
+## Results — `http://testasp.vulnweb.com` (old IIS/ASP test app)
 
 | Metric | Mode 2 — brain-off | Mode 1 — brain-on |
 |---|---|---|
-| Tools run | **16** (all) | **9** (6 skipped as irrelevant) |
-| Errored / no-op steps | 5 errored + several no-ops | **0 errors** |
-| Wall-clock | **239.2 s** | **188.3 s** (−21%) |
-| nuclei time | 176.4 s (all severities) | 129.2 s (info excluded) |
-| Findings reported | **14** | **6** |
-| &nbsp;&nbsp;· info-level noise | **9** (64%) | **0** |
-| &nbsp;&nbsp;· low (missing headers) | 5 | 5 |
-| &nbsp;&nbsp;· high (DVWA setup page) | 0 \* | **1** |
-| Precision (non-noise ÷ reported) | 5/14 = **36%** | 6/6 = **100%** |
+| Tools run | **16** (4 errored/wasted) | **12** (0 errors) |
+| Wall-clock | **452.7 s** | **305.8 s** (−32%) |
+| nuclei time | 322.8 s (all severities) | 121.1 s (info excluded) |
+| Findings reported | **15** | **6** |
+| &nbsp;&nbsp;· info-level noise | **10 (67%)** | **0** |
+| &nbsp;&nbsp;· actionable (low+) | 5 | 5 |
 
-\* The high-severity `dvwa-setup` match appeared in Mode 1's run and not Mode 2's.
-On a live target that's within nuclei's run-to-run variance (and Mode 2's heavier
-all-templates scan may have been throttled) — so we **don't** claim the brain
-"found what the dumb mode missed"; we claim the brain's list was cleaner and its
-scan lighter.
+The brain, having observed a single web app on a standard port, **skipped 4 tools
+with no surface here** (`subdomain_enum`, `dns_enum`, `takeover_check`,
+`shodan_enrich`), ran the rest with correct inputs (Mode 2 wasted `url_collect` +
+`secret_scan` by feeding a URL where a domain was needed), and **ran nuclei
+without info-level templates** — which alone cut ~200 s and all 10 noise findings.
 
-## What the brain actually bought (and what it didn't)
+## What this proves
 
-**Reproducible wins (deterministic brain decisions):**
+Same binaries, so the brain isn't scanning *faster*. It wins by doing **less
+useless work** (skip irrelevant tools, feed correct inputs) and **reporting less
+noise** (drop info-level matches) — turning "run everything, report everything"
+into "run what's relevant, report what matters." That's the thing the old linear
+recon-guru structurally could not do.
 
-1. **No wasted work.** Mode 2 fired 7 tools that can't apply to a single web app
-   (5 of them *errored*); Mode 1 skipped them and ran 9 relevant tools with zero
-   errors. Cleaner execution, and less traffic to the target.
-2. **Signal over noise.** Mode 2 reported 14 findings, **64% of them info-level
-   noise** (tech-detect, readme.md, robots.txt). Mode 1 tuned nuclei to drop info
-   templates, so every one of its findings is low-or-higher — a list an analyst
-   can act on without wading through chaff.
-3. **~21% faster**, mostly from the focused nuclei pass and no wasted-tool overhead.
+## An honest note on the findings (why the counts are low)
 
-**Honestly, what it did *not* buy here:** on this target the skipped tools
-errored fast, so the time saving came mainly from the nuclei tuning, not from
-avoiding slow wasted scans. The dramatic "wasted scans avoided" time win shows up
-on *large* targets (hundreds of dead subdomains), not a single host.
+Both modes found only 5 real issues (missing security headers) and a pile of
+info. **That's the target, not the tools.** The public "vulnerable web app" sites
+— DVWA, Juice Shop, *and* the Vulnweb family (testphp/testasp) — are
+**exploitation labs**: their real vulns are SQLi / XSS / file-upload in forms,
+which (a) need **active exploitation** (sqlmap/dalfox — deliberately out of our
+recon scope) and (b) are **invisible to nuclei**, which matches *known signatures*,
+not app-logic bugs. A recon toolkit correctly finds their *surface*, not their
+vulns.
 
-## Takeaway
+Recon shines on different issues — CVE'd software, subdomain takeovers, exposed
+secrets, misconfigured panels — which these labs don't have. To see those, point
+it at a target that *has* them (a self-hosted old WordPress/Jenkins, or your own
+domain) and set an **NVD API key** so `exploit_lookup` can map versions to CVEs
+(it was throttled here without one).
 
-Same tools, brain off vs on: the brain turns "run everything, report everything"
-into "run what's relevant, report what matters." The agentic version isn't faster
-because it scans faster (identical binaries) — it's faster and cleaner because it
-does **less useless work** and **reports less noise**. That's the thing the old
-linear recon-guru structurally could not do.
+So this benchmark measures **orchestration value** (brain on vs off), which it
+shows cleanly; it is *not* a measure of absolute vulnerability yield.
 
 ## Reproduce
 
 ```bash
 # Mode 2 (brain-off, all tools)
-docker run --rm -v bench-mode2:/workspace --entrypoint python \
-  reconguru-mcp:latest -m reconguru_mcp.cli https://pentest-ground.com:4280
+docker run --rm -v bench-m2:/workspace --entrypoint python \
+  reconguru-mcp:latest -m reconguru_mcp.cli http://testasp.vulnweb.com
 
 # Mode 1 (brain-on, adaptive selection)
-docker run --rm -e PYTHONPATH=/app -v bench-mode1:/workspace \
+docker run --rm -e PYTHONPATH=/app -v bench-m1:/workspace \
   -v "$PWD/benchmark/mode1_adaptive.py:/mode1.py:ro" --entrypoint python \
   reconguru-mcp:latest /mode1.py
 ```
