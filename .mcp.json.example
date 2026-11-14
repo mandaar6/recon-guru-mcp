@@ -1,0 +1,13 @@
+{
+  "_comment": "Copy this to '.mcp.json' at your project/workspace root to use reconguru-mcp from Claude Code. Requires Docker Desktop running and the image built (docker build -t reconguru-mcp:latest .). If 'docker' is not found when the harness launches it, replace 'docker' with the full path to docker.exe.",
+  "mcpServers": {
+    "reconguru": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-v", "reconguru-workspace:/workspace",
+        "reconguru-mcp:latest"
+      ]
+    }
+  }
+}

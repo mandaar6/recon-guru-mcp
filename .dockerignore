@@ -1,0 +1,22 @@
+# Keep the build context small and never ship local cruft into the image.
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+.git/
+.gitignore
+
+workspace/
+outputs/
+*.log
+boot_*.txt
+
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

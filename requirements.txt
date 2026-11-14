@@ -1,0 +1,6 @@
+# The official Model Context Protocol SDK (includes FastMCP).
+# Pinned to the 1.x line: 2.x renamed FastMCP -> MCPServer and changed APIs.
+mcp>=1.2.0,<2
+
+# Typed config from environment / .env (pydantic itself comes in via mcp).
+pydantic-settings>=2.0,<3

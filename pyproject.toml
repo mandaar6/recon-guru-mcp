@@ -1,0 +1,20 @@
+[project]
+name = "reconguru-mcp"
+version = "0.1.0"
+description = "An extensible, sandboxed MCP toolserver for web recon."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.2.0,<2",
+    "pydantic-settings>=2.0,<3",
+]
+
+[project.scripts]
+reconguru-mcp = "reconguru_mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["reconguru_mcp", "reconguru_mcp.tools"]

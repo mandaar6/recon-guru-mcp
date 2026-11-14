@@ -1,0 +1,38 @@
+# Convenience compose file for the HOSTED (HTTP transport) mode — the
+# "clone it and run it on a server, point harnesses at a URL" scenario.
+#
+# For LOCAL use with a harness you do NOT need compose: the harness launches
+# the container itself over stdio (see README) with:
+#   docker run -i --rm reconguru-mcp
+#
+# This file runs the server in streamable-http mode with sensible security
+# limits. (Auth/TLS for this mode arrive in Stage 6.)
+
+services:
+  reconguru:
+    build: .
+    image: reconguru-mcp:latest
+    environment:
+      RECONGURU_TRANSPORT: http
+    ports:
+      - "8000:8000"
+    volumes:
+      - reconguru-workspace:/workspace
+    # ---- security hardening -------------------------------------------------
+    user: "1000:1000"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # Recon tools need outbound network to reach targets; the default bridge
+    # network provides it. Do not use host networking.
+    # ---- resource limits (contain runaway scans) ----------------------------
+    pids_limit: 512
+    mem_limit: 1g
+    cpus: 2.0
+    tmpfs:
+      - /tmp
+
+volumes:
+  reconguru-workspace:
