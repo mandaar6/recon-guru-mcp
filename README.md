@@ -186,5 +186,26 @@ That's it — the loader registers it automatically.
 > **Security note.** Tools you add run with the server's privileges. Only add tools
 > you trust, and review any tool definition you did not write yourself — a tool's
 > name and description are shown to the LLM, so a malicious description is a form of
-> prompt injection ("tool poisoning"). The Docker sandbox (Stage 2) is the backstop
-> that limits what any tool can do.
+> prompt injection ("tool poisoning"). The Docker sandbox is the backstop that
+> limits what any tool can do, and a startup **registration linter** warns about
+> suspicious tool metadata.
+
+---
+
+## Methodology skills (optional)
+
+reconguru-mcp gives your harness the **tools**; the *methodology* (which tool to
+run next, how to pivot, how to judge a finding) comes from your harness's own LLM
+plus any **skills** you install in it. Skills are a harness feature (e.g. Claude
+Code loads `SKILL.md` files) — reconguru-mcp doesn't ship or serve them, but these
+open-source skill sets pair well if you want methodology scaffolding:
+
+- **[Claude-Red](https://github.com/SnailSploit/Claude-Red)** (MIT) — the recon /
+  web-API slice (`offensive-osint`, `offensive-api-security`, and the web-vuln
+  skills) helps the brain interpret and validate what these tools find.
+- **[osint-agent-skills](https://github.com/frangelbarrera/osint-agent-skills)** —
+  its `domain-to-infrastructure` and `ip-to-attribution` pivot playbooks fit the
+  web/infra recon scope (the identity-OSINT pivots are out of scope here).
+
+Install them in your harness (not in this server); the brain combines them with
+reconguru-mcp's tools at runtime.

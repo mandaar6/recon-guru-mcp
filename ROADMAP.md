@@ -125,7 +125,8 @@ Shipped as MCP **prompts** and **resources** — this is what the first four ref
 | **6 ✅** | **Content discovery (Tier 2)** | ffuf + SecLists, wafw00f, arjun, trufflehog (secret_scan over JS). Retire.js dropped |
 | **7 ✅** | **nuclei (Tier 3)** + takeover | vuln_scan (nuclei, severity/tags) + takeover_check (nuclei takeover templates). Both → findings. DNSReaper dropped (nuclei covers it) |
 | **8** | **Playbook layer** — MCP prompts + resources | **Reuse** osint-agent-skills + Claude-Red (recon slice) + Agentic-Bug-Hunter's validation gate; wire in, don't author |
-| **9** | **Hardening & hosting** | HTTP transport + auth, resource limits, registration linter for tool-poisoning |
+| **8** | **Methodology skills** | Collapsed: skills are harness-side (user-installed), we author none — README points to optional Claude-Red / osint-agent-skills |
+| **9 ✅** | **Hardening & hosting** | Registration linter (tool-poisoning), HTTP bearer auth (loopback default), SECURITY.md, resource limits |
 | **10** | **Portfolio packaging** | README polish, demo, "add your own tool/playbook" guide, example harness configs |
 
 > **Cut:** former Stage 9 (active/intrusive tier) and Stage 10 (OSINT/identity tier) are out of scope — see §4 and §7.

@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     # --- Transport -------------------------------------------------------
     # "stdio" (default, harness-launched) or "http" (shared/remote).
     transport: str = "stdio"
+    # Bearer token required on the HTTP endpoint (blank = unauthenticated —
+    # only safe behind network isolation / a reverse proxy). HTTP mode only.
+    http_auth_token: str = ""
+    http_host: str = "127.0.0.1"   # bind loopback by default, not 0.0.0.0
+    http_port: int = 8000
 
     # --- Sandbox runner --------------------------------------------------
     # Default per-tool-call wall-clock budget. Heavy tools override this via
