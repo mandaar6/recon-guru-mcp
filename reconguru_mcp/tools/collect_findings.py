@@ -34,7 +34,7 @@ async def collect_findings() -> dict:
     """
     ports = workspace.read_json("ports.json", {}) or {}
     exploits = workspace.read_json("exploits.json", {}) or {}
-    tech = workspace.read_json("tech_stack.json", {}) or {}
+    tech = workspace.read_json("http_probe.json", {}) or {}  # tech + missing headers
     shodan = workspace.read_json("shodan.json", {}) or {}
 
     if not (ports or tech or shodan):

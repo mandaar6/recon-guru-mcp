@@ -112,9 +112,10 @@ _HEAVY_TOOL_TIMEOUTS: dict[str, int] = {
     "ffuf": 900,          # content discovery with a real wordlist
     "katana": 600,        # crawl
     "naabu": 600,         # full-range port sweep
+    "httpx": 600,         # rich probe over many hosts
     "dnsx": 300,
+    "gau": 300,           # historical URL fetch
     "subfinder": 180,
-    "whatweb": 120,
 }
 
 

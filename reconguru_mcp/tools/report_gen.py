@@ -28,8 +28,9 @@ def _esc(s) -> str:
 def _load() -> dict:
     return {
         "subdomains": workspace.read_lines("subdomains.txt"),
-        "live": workspace.read_json("live_probe.json", {}) or {},
-        "tech": workspace.read_json("tech_stack.json", {}) or {},
+        # http_probe.json supplies both liveness/status and tech/headers.
+        "live": workspace.read_json("http_probe.json", {}) or {},
+        "tech": workspace.read_json("http_probe.json", {}) or {},
         "ports": workspace.read_json("ports.json", {}) or {},
         "exploits": workspace.read_json("exploits.json", {}) or {},
         "shodan": workspace.read_json("shodan.json", {}) or {},
@@ -280,10 +281,9 @@ async def report_gen(target: str = "", output_file: str = OUT_DEFAULT) -> dict:
     present = [
         name
         for name, key in [
-            ("subdomains.txt", "subdomains"), ("live_probe.json", "live"),
-            ("tech_stack.json", "tech"), ("ports.json", "ports"),
-            ("exploits.json", "exploits"), ("shodan.json", "shodan"),
-            ("findings.json", "findings"),
+            ("subdomains.txt", "subdomains"), ("http_probe.json", "live"),
+            ("ports.json", "ports"), ("exploits.json", "exploits"),
+            ("shodan.json", "shodan"), ("findings.json", "findings"),
         ]
         if data[key]
     ]

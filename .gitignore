@@ -15,7 +15,7 @@ env/
 .env
 
 # Tool output / scan workspaces
-workspace/
+workspace*/
 outputs/
 *.log
 

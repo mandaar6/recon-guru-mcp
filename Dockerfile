@@ -22,27 +22,26 @@ RUN mkdir -p /out \
     # @latest keeps the build working without chasing exact tags; pin these to
     # specific versions for reproducible production images.
     && go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest \
-    && go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+    && go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest \
+    && go install github.com/projectdiscovery/httpx/cmd/httpx@latest \
+    && go install github.com/projectdiscovery/katana/cmd/katana@latest \
+    && go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest \
+    && go install github.com/lc/gau/v2/cmd/gau@latest
 
 # ---- Runtime image -----------------------------------------------------------
 FROM python:3.12-slim
 
 # OS packages: recon tool binaries + runtime libs.
 #   nmap     — service/version detection (port_scan)
-#   whatweb  — tech fingerprinting (tech_stack)
 #   libpcap  — naabu runtime dependency
 #   git/curl — fetch the exploit DB and wordlists below
+# (tech fingerprinting is now httpx -td; whatweb/Ruby dropped to slim the image.)
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         nmap \
-        whatweb \
         libpcap0.8 \
         git curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-
-# ProjectDiscovery binaries from the builder stage.
-COPY --from=gobuild /out/naabu /usr/local/bin/naabu
-COPY --from=gobuild /out/nuclei /usr/local/bin/nuclei
 
 # searchsploit (ExploitDB) for exploit_lookup's local matches — shallow clone.
 RUN git clone --depth 1 https://gitlab.com/exploit-database/exploitdb.git /opt/exploitdb \
@@ -67,6 +66,18 @@ WORKDIR /app
 # ---- Python dependencies (cached layer) ---------------------------------------
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
+
+# ProjectDiscovery binaries from the builder stage. These MUST land after the
+# pip install: the python `httpx` library (a dependency) ships its own `httpx`
+# console script to /usr/local/bin, which would otherwise clobber the PD httpx
+# binary. Copying here lets the PD tool win on PATH (the python httpx library
+# is still importable; only its CLI stub is replaced).
+COPY --from=gobuild /out/naabu /usr/local/bin/naabu
+COPY --from=gobuild /out/nuclei /usr/local/bin/nuclei
+COPY --from=gobuild /out/httpx /usr/local/bin/httpx
+COPY --from=gobuild /out/katana /usr/local/bin/katana
+COPY --from=gobuild /out/dnsx /usr/local/bin/dnsx
+COPY --from=gobuild /out/gau /usr/local/bin/gau
 
 # ---- Application --------------------------------------------------------------
 COPY pyproject.toml ./
