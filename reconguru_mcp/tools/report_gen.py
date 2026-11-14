@@ -33,7 +33,32 @@ def _load() -> dict:
         "ports": workspace.read_json("ports.json", {}) or {},
         "exploits": workspace.read_json("exploits.json", {}) or {},
         "shodan": workspace.read_json("shodan.json", {}) or {},
+        "findings": workspace.read_json("findings.json", []) or [],
     }
+
+
+def _findings_section(items: list) -> str:
+    """Ranked findings table (from collect_findings). Empty string if none."""
+    if not items:
+        return ""
+    rows = ""
+    for f in items:
+        sev = f.get("severity", "info")
+        loc = _esc(f.get("host", ""))
+        if f.get("port"):
+            loc += f':{_esc(f.get("port"))}'
+        val = ('<span class="ok">✓ observed</span>' if f.get("validated")
+               else '<span class="muted">inferred</span>')
+        rows += (
+            f'<tr><td><span class="sev sev-{sev}">{_esc(sev)}</span></td>'
+            f'<td>{_esc(f.get("type"))}</td><td class="host">{loc}</td>'
+            f'<td><code>{_esc(f.get("ref") or f.get("service") or "")}</code></td>'
+            f'<td>{val}</td></tr>'
+        )
+    return f"""
+  <h2>Findings <span class="muted">({len(items)})</span></h2>
+  <table class="tbl"><thead><tr><th>Severity</th><th>Type</th><th>Location</th>
+  <th>Reference</th><th>Grounding</th></tr></thead><tbody>{rows}</tbody></table>"""
 
 
 def _stat_card(num, label, cls="") -> str:
@@ -195,6 +220,12 @@ h2{{font-size:1.15rem;margin:28px 0 14px;padding-bottom:8px;border-bottom:1px so
 .row-warn td{{background:rgba(247,195,90,.05)}} .warn{{color:var(--yel);font-weight:600;font-size:.75rem}}
 .row-vuln td{{background:rgba(247,90,90,.05)}}
 .cve{{display:inline-block;font-size:.7rem;background:rgba(247,90,90,.15);border:1px solid rgba(247,90,90,.3);color:var(--red);padding:1px 6px;border-radius:4px;margin:1px;font-family:monospace}}
+.sev{{display:inline-block;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase}}
+.sev-critical{{background:rgba(247,90,90,.22);color:#ff6b6b;border:1px solid var(--red)}}
+.sev-high{{background:rgba(247,90,90,.12);color:var(--red)}}
+.sev-medium{{background:rgba(247,195,90,.12);color:var(--yel)}}
+.sev-low{{background:rgba(90,168,247,.12);color:var(--blu)}}
+.sev-info{{background:var(--bg3);color:var(--mut)}}
 .muted{{color:var(--mut);font-size:.82rem}} .empty{{text-align:center;padding:40px}}
 code{{font-family:'Courier New',monospace;font-size:.78rem;word-break:break-all}}
 .foot{{text-align:center;color:var(--mut);font-size:.78rem;padding:24px;border-top:1px solid var(--bd)}}
@@ -210,11 +241,12 @@ code{{font-family:'Courier New',monospace;font-size:.78rem;word-break:break-all}
     {_stat_card(live_count, "Live", "live")}
     {_stat_card(total_ports, "Open Ports")}
     {_stat_card(total_cves, "CVEs", "cve")}
-    {_stat_card(total_exploits, "Exploits", "cve")}
+    {_stat_card(sum(1 for f in data["findings"] if f.get("severity") in ("critical", "high")), "Crit/High", "cve")}
   </div>
   <div class="breakdown">
     {''.join(f'<span class="bk">{_esc(k)}<b>{v}</b></span>' for k, v in sorted(buckets.items())) or '<span class="muted">no liveness data</span>'}
   </div>
+  {_findings_section(data["findings"])}
 
   <h2>Hosts <span class="muted">({len(hosts)})</span></h2>
   {cards}
@@ -251,6 +283,7 @@ async def report_gen(target: str = "", output_file: str = OUT_DEFAULT) -> dict:
             ("subdomains.txt", "subdomains"), ("live_probe.json", "live"),
             ("tech_stack.json", "tech"), ("ports.json", "ports"),
             ("exploits.json", "exploits"), ("shodan.json", "shodan"),
+            ("findings.json", "findings"),
         ]
         if data[key]
     ]
