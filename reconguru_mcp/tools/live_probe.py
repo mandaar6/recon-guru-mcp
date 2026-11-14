@@ -19,6 +19,7 @@ import asyncio
 
 import httpx
 
+from .. import auth as _auth
 from .. import scope, workspace
 from ..app import mcp
 from ..config import settings
@@ -57,7 +58,8 @@ async def _probe(client: httpx.AsyncClient, sem: asyncio.Semaphore, host: str):
 
 
 @mcp.tool()
-async def live_probe(target: str = "", source_file: str = SOURCE_DEFAULT) -> dict:
+async def live_probe(target: str = "", source_file: str = SOURCE_DEFAULT,
+                     auth: str = "") -> dict:
     """Probe hosts for HTTP/HTTPS liveness and record the responders.
 
     Tries HTTPS then HTTP for each host (redirects are *not* followed, so a
@@ -71,6 +73,10 @@ async def live_probe(target: str = "", source_file: str = SOURCE_DEFAULT) -> dic
             the host list is read from the workspace file instead.
         source_file: Workspace file to read hosts from when `target` is empty.
             Defaults to "subdomains.txt" (what subdomain_enum writes).
+        auth: Optional raw HTTP header(s) for authenticated probing, e.g.
+            "Cookie: session=…" or "Authorization: Bearer …". Overrides the
+            global RECONGURU_AUTH_HEADER. The toolkit never logs in — supply a
+            session you captured yourself.
 
     Returns:
         An envelope: how many were probed, how many are live, per-status-class
@@ -111,7 +117,7 @@ async def live_probe(target: str = "", source_file: str = SOURCE_DEFAULT) -> dic
     async with httpx.AsyncClient(
         verify=False,              # a cert error shouldn't mark a live host dead
         follow_redirects=False,    # so a redirect is reported as 3xx, not followed
-        headers={"User-Agent": settings.user_agent},
+        headers={"User-Agent": settings.user_agent, **_auth.header_dict(auth)},
     ) as client:
         results = await asyncio.gather(*(_probe(client, sem, h) for h in hosts))
 

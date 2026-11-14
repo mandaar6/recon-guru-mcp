@@ -60,6 +60,13 @@ class Settings(BaseSettings):
     stealth: bool = False              # slower, jittered, quieter when true
     user_agent: str = "reconguru-mcp/0.1 (+authorized-testing)"
 
+    # Authenticated recon: one or more raw HTTP header lines (newline-separated)
+    # that HTTP tools inject, e.g. "Cookie: session=…" or "Authorization:
+    # Bearer …". Kept in .env (git-ignored) and never logged. The toolkit never
+    # logs in — the user supplies a session captured in their own/the harness's
+    # browser. A tool's per-call `auth` argument overrides this.
+    auth_header: str = ""
+
     # --- Workspace -------------------------------------------------------
     # Where tools read/write shared data. Matches the Docker VOLUME.
     workspace_dir: str = "/workspace"

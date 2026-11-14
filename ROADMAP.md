@@ -210,13 +210,15 @@ Everything tunable lives in env vars / a git-ignored `.env` (copy `.env.example`
 
 AI version optimizes **analyst time + result quality**, not raw scan throughput (same binaries underneath). Compare Mode 2 (brain off) vs Mode 1 (brain on) on a known-vulnerable target: **precision** (actionable ÷ reported), correlation findings single tools miss, false-positive rate, wasted scans avoided, **time-to-first-actionable-finding**, report read-time. Be honest: on small targets linear can be faster; AI wins on large/messy targets via pruning, and on total time-to-signal. Trade-offs to state: token cost, less-perfect reproducibility (mitigate with temp 0 + logged decisions).
 
-### 9.9 Authenticated recon (future enhancement)
+### 9.9 Authenticated recon (implemented)
 
-Many targets gate content behind a login. **The toolkit never logs in or creates accounts** — that would mean handling the user's real credentials, which is both a safety line and pointless for CLI scanners. Instead:
+Many targets gate content behind a login. **The toolkit never logs in or creates accounts** — that would mean handling the user's real credentials, which is both a safety line and pointless for headless CLI scanners. Instead it *consumes* a session the user already has:
 
-- The **user authenticates themselves** (in their own browser) and extracts a **session cookie or bearer token**.
-- They provide it to the toolkit via config (e.g. a future `RECONGURU_AUTH_HEADER` / per-run auth setting, kept in the git-ignored `.env`, never logged — §9.6 hygiene).
-- HTTP-capable tools **inject it as a header** (`-H "Cookie: …"` / `-H "Authorization: Bearer …"`). The `target + extra_args` pattern already allows this per call; a dedicated auth setting would make "authenticated mode" apply across all tools at once.
-- The **brain flags** auth-gated targets (401/403, login redirects seen by `live_probe`) and tells the user to supply a session token — it does not attempt the login itself.
+- The **user authenticates themselves** and a **session cookie / bearer token** is captured — in their own browser, or (smoothest) in the harness's browser, which can open the login page and read the session after the user signs in. The agent never types the password.
+- The session is handed to the toolkit as a **raw HTTP header** — per call via a tool's `auth` argument, or globally via **`RECONGURU_AUTH_HEADER`** (git-ignored `.env`, never logged — §9.6 hygiene). Per-call overrides global.
+- HTTP tools **inject it as a header**: native tools (`live_probe`, `tech_stack`) via httpx, subprocess tools via `-H` (`auth.cli_args()`). Helper: `reconguru_mcp/auth.py` (`header_dict`, `cli_args`, `resolve`).
+- The **brain flags** auth-gated targets (401/403, login redirects seen by `live_probe`) and asks the user to supply/capture a session — it does not attempt the login itself.
 
-Deferred to a later stage; noted here so the tools are designed header-injection-friendly from the start.
+**Why not a browser in the container:** the server is headless, so a bundled browser is invisible to the user (can't log in to it); making it visible needs noVNC + a full Chromium (the bloat we dropped gowitness to avoid) and only helps harnesses with no browser of their own. So the browser stays on the harness/user side; the container just consumes the captured session. **Limitation:** `httpOnly` session cookies aren't readable by page JS (`document.cookie`) — fully-automatic capture needs the harness browser's cookie-store/CDP access; otherwise it's a one-time devtools copy.
+
+**Status:** `auth` param on `live_probe` + `tech_stack`, `RECONGURU_AUTH_HEADER` config, and `auth.py` are implemented and tested. Later HTTP/subprocess tools (httpx, katana, nuclei, ffuf) adopt `auth.cli_args()` as they're added.

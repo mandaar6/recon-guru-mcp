@@ -22,6 +22,7 @@ import json
 
 import httpx
 
+from .. import auth as _auth
 from .. import scope, workspace
 from ..app import mcp
 from ..config import settings
@@ -120,7 +121,8 @@ async def _analyze(client: httpx.AsyncClient, sem: asyncio.Semaphore, host: str)
 
 
 @mcp.tool()
-async def tech_stack(target: str = "", source_file: str = SOURCE_DEFAULT) -> dict:
+async def tech_stack(target: str = "", source_file: str = SOURCE_DEFAULT,
+                     auth: str = "") -> dict:
     """Fingerprint the tech stack and security headers of live hosts.
 
     Captures response headers and flags missing security headers (native), and
@@ -132,6 +134,9 @@ async def tech_stack(target: str = "", source_file: str = SOURCE_DEFAULT) -> dic
             host list is read from the workspace file.
         source_file: Workspace file to read hosts from when `target` is empty.
             Defaults to "live_hosts.txt" (what live_probe writes).
+        auth: Optional raw HTTP header(s) for authenticated fingerprinting, e.g.
+            "Cookie: session=…". Overrides RECONGURU_AUTH_HEADER. Applies to the
+            header-capture requests. The toolkit never logs in.
 
     Returns:
         An envelope: hosts analyzed, whether whatweb was available, total
@@ -163,7 +168,8 @@ async def tech_stack(target: str = "", source_file: str = SOURCE_DEFAULT) -> dic
 
     sem = asyncio.Semaphore(settings.max_concurrency)
     async with httpx.AsyncClient(
-        verify=False, headers={"User-Agent": settings.user_agent}
+        verify=False,
+        headers={"User-Agent": settings.user_agent, **_auth.header_dict(auth)},
     ) as client:
         results = await asyncio.gather(*(_analyze(client, sem, h) for h in hosts))
 
