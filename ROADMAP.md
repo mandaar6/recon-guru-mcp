@@ -89,12 +89,12 @@ Existing recon-guru API sources (crt.sh, HackerTarget, OTX, URLScan, Wayback, Vi
 **httpx** (live probe + fingerprint; replaces aiohttp) · **dnsx** (DNS resolve/brute; replaces dnspython) · **naabu** (port sweep; replaces masscan) · **nmap** (service/version ✅) · **katana** (crawl) · **wafw00f** (WAF/CDN detect)
 
 ### Tier 2 — Fingerprint & content discovery (low–medium)
-**whatweb** (tech; keep recon-guru's — + httpx's built-in `-td` detection) · **ffuf** / **dirsearch** + **SecLists** (content & dir discovery) · **arjun** (hidden-param discovery) · **Retire.js** (vulnerable JS libs) · **trufflehog** (exposed secrets)
+tech detection via **httpx `-td`** (in `http_probe`) · **ffuf** + **SecLists** (content & dir discovery) · **arjun** (hidden-param discovery) · **trufflehog** (secrets in downloaded JS)
 
 ### Tier 3 — Read-only vulnerability scanning (sends benign probes — this is the ceiling)
 **nuclei** (templated CVEs/misconfigs/exposures — *the* high-value anchor) · takeover: **DNSReaper** (dangling CNAMEs) · passive CVE map: **searchsploit** + **NVD** (keep recon-guru's exploit_lookup)
 
-> **Cut as redundant (2026-11-12):** `wappalyzer` (whatweb + httpx `-td` cover tech detection; drops a Node dependency) · `subjack` (DNSReaper is more complete) · `gitleaks` (trufflehog covers secrets; revisit only if git-repo scanning is added). ~17 → ~14 tools.
+> **Cut as redundant:** `wappalyzer` + `whatweb` (httpx `-td` covers tech detection; dropped whatweb's Ruby too, Stage 5) · `subjack` (DNSReaper is more complete) · `gitleaks` (trufflehog covers secrets) · **`Retire.js`** (Node runtime too heavy for the value — same call as gowitness/whatweb; nuclei templates cover outdated-JS detection).
 
 > The **ProjectDiscovery suite** (subfinder · dnsx · naabu · httpx · katana · nuclei · asnmap) is the consensus backbone across every reference project — it's the spine, prioritized accordingly.
 >
@@ -122,7 +122,7 @@ Shipped as MCP **prompts** and **resources** — this is what the first four ref
 | **3 ✅** | **Port recon-guru's tools** into the registry (7 tools) | subdomain_enum, live_probe, tech_stack, port_scan (naabu+nmap), exploit_lookup, shodan_enrich, report_gen — reading/writing `/workspace`. **screenshot/gowitness dropped** (least agent-usable, heaviest dep — Chromium; see §7) |
 | **4** | **Structured findings schema + correlation + validation gate** | §3 + §5. The differentiator. Build *before* piling on tools |
 | **5** | **ProjectDiscovery backbone** (Tier 0–1) | httpx, dnsx, naabu, subfinder, katana, gau — bake into Docker image |
-| **6** | **Content discovery (Tier 2)** | ffuf/dirsearch + SecLists, wafw00f, arjun, whatweb, Retire.js, trufflehog |
+| **6 ✅** | **Content discovery (Tier 2)** | ffuf + SecLists, wafw00f, arjun, trufflehog (secret_scan over JS). Retire.js dropped |
 | **7** | **nuclei (Tier 3)** + takeover | Highest-value vuln scanner; structured JSON → findings schema. subjack/DNSReaper |
 | **8** | **Playbook layer** — MCP prompts + resources | **Reuse** osint-agent-skills + Claude-Red (recon slice) + Agentic-Bug-Hunter's validation gate; wire in, don't author |
 | **9** | **Hardening & hosting** | HTTP transport + auth, resource limits, registration linter for tool-poisoning |

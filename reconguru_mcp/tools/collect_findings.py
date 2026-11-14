@@ -36,8 +36,9 @@ async def collect_findings() -> dict:
     exploits = workspace.read_json("exploits.json", {}) or {}
     tech = workspace.read_json("http_probe.json", {}) or {}  # tech + missing headers
     shodan = workspace.read_json("shodan.json", {}) or {}
+    secrets = workspace.read_json("secrets.json", []) or []
 
-    if not (ports or tech or shodan):
+    if not (ports or tech or shodan or secrets):
         return {
             "ok": False,
             "error": (
@@ -103,6 +104,16 @@ async def collect_findings() -> dict:
                 "shodan_vuln", host=host, ip=ip, ref=cid, severity="medium",
                 tool="shodan_enrich", evidence=f"Shodan flagged {cid} on {ip}",
             ))
+
+    # --- leaked secrets (trufflehog over JS) ----------------------------
+    for s in secrets:
+        detector = s.get("detector", "secret")
+        verified = s.get("verified", False)
+        items.append(findings.make_finding(
+            "secret", ref=detector, severity="critical" if verified else "high",
+            tool="secret_scan",
+            evidence=("verified " if verified else "") + f"{detector}: {s.get('redacted', '')}",
+        ))
 
     ordered = findings.save_findings(items)
 

@@ -26,7 +26,8 @@ RUN mkdir -p /out \
     && go install github.com/projectdiscovery/httpx/cmd/httpx@latest \
     && go install github.com/projectdiscovery/katana/cmd/katana@latest \
     && go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest \
-    && go install github.com/lc/gau/v2/cmd/gau@latest
+    && go install github.com/lc/gau/v2/cmd/gau@latest \
+    && go install github.com/ffuf/ffuf/v2@latest
 
 # ---- Runtime image -----------------------------------------------------------
 FROM python:3.12-slim
@@ -46,6 +47,10 @@ RUN apt-get update \
 # searchsploit (ExploitDB) for exploit_lookup's local matches — shallow clone.
 RUN git clone --depth 1 https://gitlab.com/exploit-database/exploitdb.git /opt/exploitdb \
     && ln -sf /opt/exploitdb/searchsploit /usr/local/bin/searchsploit
+
+# trufflehog (secret scanning) — official install script fetches the prebuilt binary.
+RUN curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh \
+        | sh -s -- -b /usr/local/bin
 
 # Wordlists: only the two defaults reconguru-mcp references (not all ~1GB of
 # SecLists). Cloners who want the full set can mount it and point the
@@ -78,6 +83,10 @@ COPY --from=gobuild /out/httpx /usr/local/bin/httpx
 COPY --from=gobuild /out/katana /usr/local/bin/katana
 COPY --from=gobuild /out/dnsx /usr/local/bin/dnsx
 COPY --from=gobuild /out/gau /usr/local/bin/gau
+COPY --from=gobuild /out/ffuf /usr/local/bin/ffuf
+
+# Python-based recon CLIs (small): wafw00f (WAF detect), arjun (param discovery).
+RUN pip install --no-cache-dir wafw00f arjun
 
 # ---- Application --------------------------------------------------------------
 COPY pyproject.toml ./

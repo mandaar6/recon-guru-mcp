@@ -116,6 +116,9 @@ _HEAVY_TOOL_TIMEOUTS: dict[str, int] = {
     "dnsx": 300,
     "gau": 300,           # historical URL fetch
     "subfinder": 180,
+    "arjun": 600,         # param discovery sends many probes
+    "trufflehog": 300,    # secret scan over downloaded JS
+    "wafw00f": 120,
 }
 
 
