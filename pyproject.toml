@@ -12,6 +12,7 @@ dependencies = [
 
 [project.scripts]
 reconguru-mcp = "reconguru_mcp.server:main"
+reconguru-cli = "reconguru_mcp.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]
