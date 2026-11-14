@@ -247,3 +247,8 @@ reconguru-mcp's tools at runtime.
 Stages 1–7 and 9 are complete (framework → Docker → tool suite → findings model →
 hardening); Stage 10 (packaging) is in progress. Full detail, design decisions,
 and the tiered tool catalog are in **[ROADMAP.md](ROADMAP.md)**.
+
+**Does the brain actually help?** [BENCHMARK.md](BENCHMARK.md) runs the same tools
+brain-off vs brain-on against a live DVWA target: the agentic mode ran only the 9
+relevant tools (vs 16, 5 errored), finished ~21% faster, and reported **6 findings
+with zero info-noise** vs 14 findings that were **64% noise**.

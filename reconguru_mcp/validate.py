@@ -70,6 +70,17 @@ def validate_target(target: str) -> str:
     if _HOSTNAME_RE.match(t):
         return t
 
+    # host:port — a hostname or IPv4 with an explicit port (web apps on
+    # non-standard ports). IPv6 literals were already accepted above.
+    if ":" in t:
+        host, _, port = t.rpartition(":")
+        if host and port.isdigit() and 1 <= int(port) <= 65535:
+            try:
+                validate_target(host)
+                return t
+            except InvalidTarget:
+                pass
+
     raise InvalidTarget(
         f"target is not a valid hostname, IP address, or CIDR range: {target!r}"
     )

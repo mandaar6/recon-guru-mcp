@@ -64,6 +64,12 @@ async def run(target: str) -> dict:
     results: list[dict] = []
     t0 = time.monotonic()
 
+    # Seed the target (keeping any explicit :port) so the chain works for a
+    # single host too: http_probe reads subdomains.txt, subdomain_enum then
+    # merges anything it discovers on top.
+    hostport = target.split("://", 1)[-1].split("/", 1)[0]
+    workspace.merge_lines("subdomains.txt", [hostport])
+
     print(f"[mode2] linear brain-off recon of {target} — {len(steps)} steps\n")
     for name, factory in steps:
         start = time.monotonic()
