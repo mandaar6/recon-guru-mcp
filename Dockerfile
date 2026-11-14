@@ -4,23 +4,62 @@
 # container. On any host (Windows via WSL2, macOS, Linux) the tools execute in
 # an isolated Linux sandbox with no access to the host filesystem.
 #
-# Stage 1 shipped the server + the nmap tool. This image bakes nmap in so a
-# real scan actually runs. More tool binaries get added here as the registry
-# grows (Stage 3+).
+# Multi-stage: a Go builder compiles the ProjectDiscovery tools, then a slim
+# runtime image carries the server plus every recon binary the ported tools
+# use. Tools that still lack a binary here degrade gracefully (the sandbox
+# runner reports "binary not found" instead of crashing).
 
+# ---- Builder: compile the ProjectDiscovery Go tools --------------------------
+FROM golang:1.23-bookworm AS gobuild
+# naabu links libpcap (CGO) for its scans.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libpcap-dev \
+    && rm -rf /var/lib/apt/lists/*
+# GOTOOLCHAIN=auto lets `go install` download the newer Go toolchain that
+# recent naabu/nuclei require, instead of failing on the base image's version.
+ENV CGO_ENABLED=1 GOBIN=/out GOTOOLCHAIN=auto
+RUN mkdir -p /out \
+    # @latest keeps the build working without chasing exact tags; pin these to
+    # specific versions for reproducible production images.
+    && go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest \
+    && go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+
+# ---- Runtime image -----------------------------------------------------------
 FROM python:3.12-slim
 
-# ---- OS packages: the recon tool binaries -------------------------------------
-# Add new tools' apt packages here (this is the "sudo apt install" step).
+# OS packages: recon tool binaries + runtime libs.
+#   nmap     — service/version detection (port_scan)
+#   whatweb  — tech fingerprinting (tech_stack)
+#   libpcap  — naabu runtime dependency
+#   git/curl — fetch the exploit DB and wordlists below
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         nmap \
-        ca-certificates \
+        whatweb \
+        libpcap0.8 \
+        git curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+# ProjectDiscovery binaries from the builder stage.
+COPY --from=gobuild /out/naabu /usr/local/bin/naabu
+COPY --from=gobuild /out/nuclei /usr/local/bin/nuclei
+
+# searchsploit (ExploitDB) for exploit_lookup's local matches — shallow clone.
+RUN git clone --depth 1 https://gitlab.com/exploit-database/exploitdb.git /opt/exploitdb \
+    && ln -sf /opt/exploitdb/searchsploit /usr/local/bin/searchsploit
+
+# Wordlists: only the two defaults reconguru-mcp references (not all ~1GB of
+# SecLists). Cloners who want the full set can mount it and point the
+# RECONGURU_*_WORKLIST vars at it.
+RUN mkdir -p /opt/seclists/Discovery/DNS /opt/seclists/Discovery/Web-Content \
+    && curl -fsSL -o /opt/seclists/Discovery/DNS/subdomains-top1million-5000.txt \
+        https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/DNS/subdomains-top1million-5000.txt \
+    && curl -fsSL -o /opt/seclists/Discovery/Web-Content/common.txt \
+        https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/common.txt
+
 # ---- Non-root user ------------------------------------------------------------
-# Tools run as an unprivileged user. (A non-privileged nmap uses a TCP connect
-# scan automatically; SYN scans like -sS need --cap-add=NET_RAW at run time.)
+# Tools run unprivileged. nmap/naabu fall back to TCP connect scans; SYN scans
+# (-sS) need --cap-add=NET_RAW at run time.
 RUN useradd --create-home --uid 1000 recon
 
 WORKDIR /app

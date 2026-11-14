@@ -19,11 +19,16 @@ with other tools' environment (e.g. `RECONGURU_SHODAN_API_KEY`, not a bare
 
 from __future__ import annotations
 
+import logging
 import os
 from functools import lru_cache
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# httpx logs every request URL at INFO. That's noise, and a Shodan-style
+# key-in-URL would otherwise land in the server's stderr logs — so silence it.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 class Settings(BaseSettings):
@@ -76,6 +81,7 @@ class Settings(BaseSettings):
     censys_api_secret: str = Field(default="")
     github_token: str = Field(default="")
     chaos_api_key: str = Field(default="")
+    nvd_api_key: str = Field(default="")  # lifts NVD rate limits for exploit_lookup
 
     # --------------------------------------------------------------------
     def timeout_for(self, tool: str) -> int:

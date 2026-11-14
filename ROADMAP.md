@@ -89,7 +89,7 @@ Existing recon-guru API sources (crt.sh, HackerTarget, OTX, URLScan, Wayback, Vi
 **httpx** (live probe + fingerprint; replaces aiohttp) · **dnsx** (DNS resolve/brute; replaces dnspython) · **naabu** (port sweep; replaces masscan) · **nmap** (service/version ✅) · **katana** (crawl) · **wafw00f** (WAF/CDN detect)
 
 ### Tier 2 — Fingerprint & content discovery (low–medium)
-**whatweb** (tech; keep recon-guru's — + httpx's built-in `-td` detection) · **ffuf** / **dirsearch** + **SecLists** (content & dir discovery) · **arjun** (hidden-param discovery) · **gowitness** (screenshots; keep recon-guru's) · **Retire.js** (vulnerable JS libs) · **trufflehog** (exposed secrets)
+**whatweb** (tech; keep recon-guru's — + httpx's built-in `-td` detection) · **ffuf** / **dirsearch** + **SecLists** (content & dir discovery) · **arjun** (hidden-param discovery) · **Retire.js** (vulnerable JS libs) · **trufflehog** (exposed secrets)
 
 ### Tier 3 — Read-only vulnerability scanning (sends benign probes — this is the ceiling)
 **nuclei** (templated CVEs/misconfigs/exposures — *the* high-value anchor) · takeover: **DNSReaper** (dangling CNAMEs) · passive CVE map: **searchsploit** + **NVD** (keep recon-guru's exploit_lookup)
@@ -119,10 +119,10 @@ Shipped as MCP **prompts** and **resources** — this is what the first four ref
 |---|---|---|
 | **1 ✅** | Framework: server, sandbox runner, validation, `nmap_scan` | Done |
 | **2 ✅** | Docker image, nmap baked in, live harness-verified | Done |
-| **3** | **Port recon-guru's 8 tools** into the registry | subdomain_enum, live_probe, tech_stack, port_scan (naabu+nmap), exploit_lookup, shodan_enrich, screenshot, report_gen — reading/writing `/workspace` |
+| **3 ✅** | **Port recon-guru's tools** into the registry (7 tools) | subdomain_enum, live_probe, tech_stack, port_scan (naabu+nmap), exploit_lookup, shodan_enrich, report_gen — reading/writing `/workspace`. **screenshot/gowitness dropped** (least agent-usable, heaviest dep — Chromium; see §7) |
 | **4** | **Structured findings schema + correlation + validation gate** | §3 + §5. The differentiator. Build *before* piling on tools |
 | **5** | **ProjectDiscovery backbone** (Tier 0–1) | httpx, dnsx, naabu, subfinder, katana, gau — bake into Docker image |
-| **6** | **Content discovery (Tier 2)** | ffuf/dirsearch + SecLists, wafw00f, arjun, whatweb/wappalyzer, gowitness, Retire.js, trufflehog |
+| **6** | **Content discovery (Tier 2)** | ffuf/dirsearch + SecLists, wafw00f, arjun, whatweb, Retire.js, trufflehog |
 | **7** | **nuclei (Tier 3)** + takeover | Highest-value vuln scanner; structured JSON → findings schema. subjack/DNSReaper |
 | **8** | **Playbook layer** — MCP prompts + resources | **Reuse** osint-agent-skills + Claude-Red (recon slice) + Agentic-Bug-Hunter's validation gate; wire in, don't author |
 | **9** | **Hardening & hosting** | HTTP transport + auth, resource limits, registration linter for tool-poisoning |
@@ -141,8 +141,9 @@ Claude-Red's 78 skills sprawl into wireless, Active Directory, IoT, cloud, C2 fr
 - ✅ **Web + API reconnaissance** (the core)
 - ✅ **Read-only templated vuln scanning** (nuclei, takeover, CVE mapping) — the ceiling, Tier 3
 - ✅ **A reused methodology/playbook layer** that makes the brain effective
-- ❌ **No active/intrusive exploitation** — no sqlmap, OWASP ZAP, dalfox, or payload-sending fuzzing (too heavy; past the recon line)
+- ❌ **No active/intrusive exploitation** — no sqlmap, OWASP ZAP, dalfox, or payload-sending fuzzing (too heavy; past the recon line). Authenticated recon doesn't change this: scanning behind a login is still recon; *exploiting* a found SQLi with sqlmap is not.
 - ❌ **No identity OSINT** — no sherlock/holehe/theHarvester/breach APIs (outside web/API focus)
+- ❌ **No screenshots / visual capture** — gowitness dropped entirely (Chromium-heavy; and images aren't usable by the brain in our text-envelope model — visual triage is a human task the report already supports structurally)
 - ❌ Not wireless / hardware / RF, not Active Directory / internal network, not C2 / post-exploitation / evasion, not mobile/firmware, not exploit development
 
 "Ultimate" = **depth and correlation within web/API recon**, plus the reused playbook layer no one else ships — not maximal surface area. Everything shipped either *gathers information* or runs *read-only templated checks*; nothing tries to break the target.
@@ -208,3 +209,14 @@ Everything tunable lives in env vars / a git-ignored `.env` (copy `.env.example`
 ### 9.8 Benchmarking (portfolio)
 
 AI version optimizes **analyst time + result quality**, not raw scan throughput (same binaries underneath). Compare Mode 2 (brain off) vs Mode 1 (brain on) on a known-vulnerable target: **precision** (actionable ÷ reported), correlation findings single tools miss, false-positive rate, wasted scans avoided, **time-to-first-actionable-finding**, report read-time. Be honest: on small targets linear can be faster; AI wins on large/messy targets via pruning, and on total time-to-signal. Trade-offs to state: token cost, less-perfect reproducibility (mitigate with temp 0 + logged decisions).
+
+### 9.9 Authenticated recon (future enhancement)
+
+Many targets gate content behind a login. **The toolkit never logs in or creates accounts** — that would mean handling the user's real credentials, which is both a safety line and pointless for CLI scanners. Instead:
+
+- The **user authenticates themselves** (in their own browser) and extracts a **session cookie or bearer token**.
+- They provide it to the toolkit via config (e.g. a future `RECONGURU_AUTH_HEADER` / per-run auth setting, kept in the git-ignored `.env`, never logged — §9.6 hygiene).
+- HTTP-capable tools **inject it as a header** (`-H "Cookie: …"` / `-H "Authorization: Bearer …"`). The `target + extra_args` pattern already allows this per call; a dedicated auth setting would make "authenticated mode" apply across all tools at once.
+- The **brain flags** auth-gated targets (401/403, login redirects seen by `live_probe`) and tells the user to supply a session token — it does not attempt the login itself.
+
+Deferred to a later stage; noted here so the tools are designed header-injection-friendly from the start.
