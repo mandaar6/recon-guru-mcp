@@ -38,11 +38,18 @@ How to drive it well:
   scope_exclude.txt in the workspace).
 - A sensible full-recon order: subdomain_enum -> http_probe -> port_scan ->
   content_discovery/crawl -> vuln_scan -> collect_findings -> report_gen.
-- Be adaptive, don't run everything blindly: if the user already gave specific
-  in-scope hosts (or the scope list is pre-populated), SKIP subdomain_enum/dns_enum
-  and go straight to http_probe on those hosts. Skip tools with no surface (e.g.
-  takeover_check without CNAMEs). Tune heavy tools (e.g. vuln_scan severity=) to
-  cut info-level noise.
+- Be adaptive, don't run everything blindly: skip tools with no surface (e.g.
+  takeover_check without CNAMEs), and tune heavy tools (e.g. vuln_scan severity=)
+  to cut info-level noise.
+- Scope vs. subdomain discovery — confirm intent, don't assume. The toolset is
+  modular, so a scope list is optional and won't always be present:
+    * If the prompt already says what to do ("just scan these two hosts", or
+      "find every subdomain of x"), follow it — no need to ask.
+    * Else if scope_include.txt is pre-populated OR the user named specific
+      hosts/subdomains, ask ONE short question before scanning: scan only those
+      listed hosts, or also run subdomain_enum/dns_enum to discover more? Then
+      act on the answer (listed-only -> skip discovery, go straight to http_probe).
+    * Else (a bare domain, empty scope) subdomain discovery is the sensible default.
 - This server is RECON only — it does not exploit (no SQLi/XSS payloads). When you
   find something exploitable, report it for the user to pursue; don't try to exploit.
 - Authenticated targets: the server NEVER logs in. If a target returns 401/403 or

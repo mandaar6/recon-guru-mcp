@@ -29,8 +29,15 @@ cd recon-guru-mcp
 docker build -t reconguru-mcp:latest .
 ```
 
-Point your harness at it (e.g. `.mcp.json` for Claude Code, or
-`claude_desktop_config.json`):
+Now tell your harness the container exists. **Claude Code can do this for you in
+one command** (no file to find or edit) — run it in the folder where you want
+reconguru available:
+
+```bash
+claude mcp add reconguru -- docker run -i --rm -v reconguru-workspace:/workspace reconguru-mcp:latest
+```
+
+Prefer to edit the config by hand (or use a different harness)? Add this block:
 
 ```json
 {
@@ -45,10 +52,24 @@ Point your harness at it (e.g. `.mcp.json` for Claude Code, or
 }
 ```
 
+**Where that config lives** (it's a normal user file — no admin/root needed):
+
+| Harness | File | Location |
+|---|---|---|
+| Claude Code (per project) | `.mcp.json` | your project's root folder |
+| Claude Code (global) | managed by `claude mcp add` | `~/.claude.json` |
+| Claude Desktop (macOS) | `claude_desktop_config.json` | `~/Library/Application Support/Claude/` |
+| Claude Desktop (Windows) | `claude_desktop_config.json` | `%APPDATA%\Claude\` |
+
+> **Why not just *ask* the harness to configure itself?** It can't: a harness can
+> only call a server it already knows about, and it doesn't know about reconguru
+> until this entry exists — a chicken-and-egg. `claude mcp add` is the automation:
+> it writes that entry for you, then every new session picks it up.
+
 That's the whole install — no package to install into the harness, no separate
-service to start. Once the `.mcp.json` entry is there, your harness **launches the
-container itself** over stdio and discovers the tools automatically. Just start a
-new session and ask, in plain language:
+service to start. Once the entry is there, your harness **launches the container
+itself** over stdio and discovers the tools automatically. Just start a new
+session and ask, in plain language:
 
 > *"Use reconguru to recon example.com — enumerate subdomains, probe which are
 > live, scan the live hosts, and give me a ranked findings report."*
@@ -126,6 +147,16 @@ cp .env.example .env    # then edit on your host
 pattern per line (`example.com`, `*.example.com`, `192.0.2.0/24`). Discovery tools
 filter their output to in-scope hosts; active tools refuse out-of-scope targets.
 
+> **What's "bind-mounting"?** Just sharing one folder between your PC and the
+> container. `-v /host/folder:/workspace` means "the container's `/workspace` *is*
+> my `/host/folder`." So you edit `scope_include.txt` in a normal folder on your
+> machine with any text editor, and the container sees it instantly — no
+> `docker exec`, no SSH, nothing *inside* the container to touch. Reports and
+> `findings.json` appear back in that same folder. (The quickstart used a *named
+> volume* — `reconguru-workspace:/workspace` — which Docker manages for you but
+> hides on disk; a bind-mount to a real folder is what you want once you care
+> about editing scope and reading reports.)
+
 **Wire both into the run** by bind-mounting a host folder as `/workspace` (so your
 scope files go in and the reports/findings come back out) and passing `--env-file`:
 
@@ -140,6 +171,8 @@ echo '*.example.com' > ./workspace/scope_include.txt
     "reconguru": {
       "command": "docker",
       "args": ["run", "-i", "--rm",
+               "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
+               "--pids-limit", "512", "--memory", "2g", "--cpus", "2",
                "--env-file", "/abs/path/to/recon-guru-mcp/.env",
                "-v", "/abs/path/to/recon-guru-mcp/workspace:/workspace",
                "reconguru-mcp:latest"]
@@ -148,7 +181,9 @@ echo '*.example.com' > ./workspace/scope_include.txt
 }
 ```
 
-Now `report.html`, `findings.json`, and every tool's output land in your
+This is the **recommended** config — it includes the least-privilege flags from
+[Run it hardened](#run-it-hardened) below, so you're sandboxed by default. Now
+`report.html`, `findings.json`, and every tool's output land in your
 `./workspace` folder, and you edit `.env` / scope files any time by just editing
 them on your host and restarting the harness session.
 
@@ -162,15 +197,30 @@ them on your host and restarting the harness session.
 
 ## Run it hardened
 
-The quickstart run is fine for local use. For heavier scanning, untrusted
-targets, or a shared machine, run the container **least-privilege** — as a
-non-root user, with no Linux capabilities, no privilege escalation, and capped
-CPU/memory/process count so a runaway scan can't starve or harm the host. Same
-image, just extra `docker run` flags:
+**What's already secure by default:** the image bakes in the safe parts — it runs
+as a **non-root user**, ships no setuid binaries, and (in `vuln_scan` etc.) runs
+tools as an unprivileged process. Those travel *inside* the image, so you always
+get them.
+
+**What Docker makes you opt into:** the runtime isolation flags below —
+`--cap-drop`, `--security-opt no-new-privileges`, and the CPU/memory/process caps.
+An image **cannot force these on itself**; by Docker's design they're supplied by
+whoever runs `docker run`. That's why they live here and not in the build. Two
+ways to always get them:
+
+- **stdio / local:** use the recommended config in
+  [Configuration & scope](#configuration--scope) above — it already includes these
+  flags, so copy that one and you're hardened by default.
+- **hosted / HTTP:** `docker compose up` — the shipped
+  [`docker-compose.yml`](docker-compose.yml) applies all of them (plus a read-only
+  root filesystem) with no extra typing.
+
+To add them to a plain `docker run` yourself — least-privilege, with capped
+CPU/memory/process count so a runaway scan can't starve or harm the host:
 
 ```bash
 docker run -i --rm \
-  --user 1000:1000 --cap-drop ALL --security-opt no-new-privileges \
+  --cap-drop ALL --security-opt no-new-privileges \
   --pids-limit 512 --memory 2g --cpus 2 \
   -v reconguru-workspace:/workspace \
   reconguru-mcp:latest
