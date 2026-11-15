@@ -141,7 +141,7 @@ _FETCHERS = {
 
 
 @mcp.tool()
-async def subdomain_enum(target: str, sources: str = "") -> dict:
+async def subdomain_enum(target: str, sources: str = "", project: str = "") -> dict:
     """Discover subdomains of a domain from passive OSINT sources.
 
     Queries public databases *about* the domain (certificate transparency,
@@ -163,6 +163,7 @@ async def subdomain_enum(target: str, sources: str = "") -> dict:
         failed / were skipped, a small sample, and the output file path. The
         full subdomain list is written to the workspace, not returned inline.
     """
+    workspace.use_project(project, target)
     try:
         domain = validate_target(target)
     except InvalidTarget as e:

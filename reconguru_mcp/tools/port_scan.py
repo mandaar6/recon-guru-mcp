@@ -116,7 +116,7 @@ def _bare_ports(ports: list[int]) -> list[dict]:
 
 @mcp.tool()
 async def port_scan(target: str = "", source_file: str = SOURCE_DEFAULT,
-                    ports: str = "") -> dict:
+                    ports: str = "", project: str = "") -> dict:
     """Scan live hosts for open ports and detect services/versions.
 
     Args:
@@ -135,6 +135,7 @@ async def port_scan(target: str = "", source_file: str = SOURCE_DEFAULT,
         summary sample, any unresolved hosts, and the output file path. Full
         detail is written to ports.json.
     """
+    workspace.use_project(project, target)
     if target.strip():
         raw_hosts = [h.strip() for h in target.split(",") if h.strip()]
     else:

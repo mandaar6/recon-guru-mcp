@@ -28,7 +28,7 @@ DEFAULT_MATCH = "200,204,301,302,307,401,403"
 
 @mcp.tool()
 async def content_discovery(target: str, wordlist: str = "", extensions: str = "",
-                            match_codes: str = "", auth: str = "") -> dict:
+                            match_codes: str = "", auth: str = "", project: str = "") -> dict:
     """Brute-force directories/files on a host with ffuf.
 
     Args:
@@ -46,6 +46,7 @@ async def content_discovery(target: str, wordlist: str = "", extensions: str = "
         An envelope: hits found, counts by status, newly added URLs, a sample,
         and the output file path. Full detail is written to content.json.
     """
+    workspace.use_project(project, target)
     try:
         host = validate_target(target.split("://", 1)[-1].split("/", 1)[0])
     except InvalidTarget as e:

@@ -185,5 +185,5 @@ switch (Ask "Which harness?" "1") {
 
 Head "Done"
 Write-Host "A copy of the JSON config is saved at: $snippet"
-Write-Host "Edit scope lists any time at:          $ws\scope_include.txt"
-Write-Host "Scan results (report.html, findings.json, ...) will appear in: $ws"
+Write-Host "Edit GLOBAL scope lists any time at:    $ws\scope_include.txt (+ _exclude)"
+Write-Host "Scan results land in a per-target folder under $ws, e.g. $ws\example.com\report.html"

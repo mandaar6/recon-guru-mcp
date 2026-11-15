@@ -183,5 +183,5 @@ esac
 
 head "Done"
 say "A copy of the JSON config is saved at: $SNIPPET"
-say "Edit scope lists any time at:          $ws/scope_include.txt"
-say "Scan results (report.html, findings.json, …) will appear in: $ws"
+say "Edit GLOBAL scope lists any time at:    $ws/scope_include.txt (+ _exclude)"
+say "Scan results land in a per-target folder under $ws, e.g. $ws/example.com/report.html"

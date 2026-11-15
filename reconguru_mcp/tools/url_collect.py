@@ -20,7 +20,7 @@ URLS_FILE = "urls.txt"
 
 
 @mcp.tool()
-async def url_collect(target: str, include_subs: bool = True) -> dict:
+async def url_collect(target: str, include_subs: bool = True, project: str = "") -> dict:
     """Collect historical URLs for a domain from public archives (gau).
 
     Args:
@@ -31,6 +31,7 @@ async def url_collect(target: str, include_subs: bool = True) -> dict:
         An envelope: total URLs collected, how many were newly added, a sample,
         and the output file path. The full set is written to urls.txt.
     """
+    workspace.use_project(project, target)
     try:
         domain = validate_target(target)
     except InvalidTarget as e:

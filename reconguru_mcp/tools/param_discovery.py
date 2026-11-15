@@ -20,7 +20,7 @@ TMP_OUT = "_arjun_out.json"
 
 
 @mcp.tool()
-async def param_discovery(target: str, auth: str = "") -> dict:
+async def param_discovery(target: str, auth: str = "", project: str = "") -> dict:
     """Discover hidden HTTP parameters on a URL (arjun).
 
     Args:
@@ -31,6 +31,7 @@ async def param_discovery(target: str, auth: str = "") -> dict:
         An envelope: parameters found, a sample, and the output file path.
         Detail is written to params.json.
     """
+    workspace.use_project(project, target)
     try:
         host = validate_target(target.split("://", 1)[-1].split("/", 1)[0])
     except InvalidTarget as e:

@@ -19,7 +19,7 @@ OUT_FILE = "takeover.json"
 
 
 @mcp.tool()
-async def takeover_check(target: str = "", source_file: str = SOURCE_DEFAULT) -> dict:
+async def takeover_check(target: str = "", source_file: str = SOURCE_DEFAULT, project: str = "") -> dict:
     """Check subdomains for takeover (dangling CNAME) with nuclei.
 
     Args:
@@ -32,6 +32,7 @@ async def takeover_check(target: str = "", source_file: str = SOURCE_DEFAULT) ->
         An envelope: hosts checked, takeovers flagged (with service + CNAME), and
         the output file path. Detail → takeover.json (feeds collect_findings).
     """
+    workspace.use_project(project, target)
     if target.strip():
         raw = [h.strip() for h in target.split(",") if h.strip()]
     else:

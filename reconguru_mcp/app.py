@@ -34,8 +34,15 @@ Tools by phase:
 - Report:   report_gen (any-time HTML report)
 
 How to drive it well:
+- Per-target workspace: every tool takes an optional `project` — a short name for
+  the engagement, normally the root domain (e.g. "example.com"). Pass the SAME
+  `project` on every call in one scan so all outputs land in one `<project>/`
+  folder and chain together; use a DIFFERENT `project` for a different target so
+  the two never collide. Omit it and it's derived from the target and reused for
+  the rest of the scan.
 - Only scan AUTHORIZED targets. Honor the scope files (scope_include.txt /
-  scope_exclude.txt in the workspace).
+  scope_exclude.txt — global ones at the workspace root, optional per-target ones
+  inside the project folder; both are enforced).
 - A sensible full-recon order: subdomain_enum -> http_probe -> port_scan ->
   content_discovery/crawl -> vuln_scan -> collect_findings -> report_gen.
 - Be adaptive, don't run everything blindly: skip tools with no surface (e.g.

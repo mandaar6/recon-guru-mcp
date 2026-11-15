@@ -30,7 +30,7 @@ def _to_url(host: str) -> str:
 
 @mcp.tool()
 async def crawl(target: str = "", source_file: str = SOURCE_DEFAULT,
-                depth: int = 2, auth: str = "") -> dict:
+                depth: int = 2, auth: str = "", project: str = "") -> dict:
     """Crawl live hosts for endpoints and JS files (katana).
 
     Args:
@@ -46,6 +46,7 @@ async def crawl(target: str = "", source_file: str = SOURCE_DEFAULT,
         An envelope: URLs discovered, newly added, JS-file count, a sample, and
         the output file path. The full set is merged into urls.txt.
     """
+    workspace.use_project(project, target)
     if target.strip():
         raw = [h.strip() for h in target.split(",") if h.strip()]
     else:

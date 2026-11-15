@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import shlex
 
+from .. import workspace
 from ..app import mcp
 from ..sandbox import run_tool
 from ..validate import InvalidTarget, validate_target
@@ -26,7 +27,7 @@ DEFAULT_ARGS = ["-sV", "-T4", "--top-ports", "100"]
 
 
 @mcp.tool()
-async def nmap_scan(target: str, extra_args: str = "") -> dict:
+async def nmap_scan(target: str, extra_args: str = "", project: str = "") -> dict:
     """Run an nmap scan against an authorized target.
 
     Only scan hosts you are authorized to test. For practice, the nmap project
@@ -45,6 +46,7 @@ async def nmap_scan(target: str, extra_args: str = "") -> dict:
         duration, and whether it timed out or was truncated. If 0 hosts come
         back up, a hint to retry with "-Pn" is added.
     """
+    workspace.use_project(project, target)
     try:
         tgt = validate_target(target)
     except InvalidTarget as e:

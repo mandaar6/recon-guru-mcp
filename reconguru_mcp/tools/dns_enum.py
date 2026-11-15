@@ -52,7 +52,7 @@ async def _run_dnsx(argv: list[str]) -> tuple[list[dict], bool]:
 
 @mcp.tool()
 async def dns_enum(target: str = "", source_file: str = SOURCE_DEFAULT,
-                   bruteforce: bool = False) -> dict:
+                   bruteforce: bool = False, project: str = "") -> dict:
     """Resolve subdomains (and optionally brute-force new ones) with dnsx.
 
     Args:
@@ -70,6 +70,8 @@ async def dns_enum(target: str = "", source_file: str = SOURCE_DEFAULT,
     """
     records: list[dict] = []
     available = True
+
+    workspace.use_project(project, target)
 
     # Brute-force pass.
     if bruteforce:

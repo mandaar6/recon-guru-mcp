@@ -64,9 +64,11 @@ async def run(target: str) -> dict:
     results: list[dict] = []
     t0 = time.monotonic()
 
-    # Seed the target (keeping any explicit :port) so the chain works for a
-    # single host too: http_probe reads subdomains.txt, subdomain_enum then
-    # merges anything it discovers on top.
+    # Namespace this run's workspace under the target folder, then seed the
+    # target (keeping any explicit :port) so the chain works for a single host
+    # too: http_probe reads subdomains.txt, subdomain_enum then merges anything
+    # it discovers on top. Tools inherit this active project (no project= arg).
+    workspace.set_project(target=target)
     hostport = target.split("://", 1)[-1].split("/", 1)[0]
     workspace.merge_lines("subdomains.txt", [hostport])
 

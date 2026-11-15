@@ -35,7 +35,7 @@ def _is_js(url: str) -> bool:
 
 @mcp.tool()
 async def secret_scan(source_file: str = SOURCE_DEFAULT, max_files: int = 40,
-                      auth: str = "") -> dict:
+                      auth: str = "", project: str = "") -> dict:
     """Scan the target's JavaScript for leaked secrets (trufflehog).
 
     Args:
@@ -48,6 +48,7 @@ async def secret_scan(source_file: str = SOURCE_DEFAULT, max_files: int = 40,
         An envelope: files scanned, secrets found, detector-type breakdown, a
         redacted sample, and the output file path. Detail → secrets.json.
     """
+    workspace.use_project(project)
     urls = [u for u in workspace.read_lines(source_file) if _is_js(u)][:max_files]
     if not urls:
         return {

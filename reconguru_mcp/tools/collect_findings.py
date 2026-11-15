@@ -19,7 +19,7 @@ from ..app import mcp
 
 
 @mcp.tool()
-async def collect_findings() -> dict:
+async def collect_findings(project: str = "") -> dict:
     """Correlate recon results into one structured, ranked findings list.
 
     Reads ports.json, exploits.json, tech_stack.json, and shodan.json from the
@@ -32,6 +32,7 @@ async def collect_findings() -> dict:
         highest-severity findings, and the output file path. The full list is
         written to findings.json.
     """
+    workspace.use_project(project)
     ports = workspace.read_json("ports.json", {}) or {}
     exploits = workspace.read_json("exploits.json", {}) or {}
     tech = workspace.read_json("http_probe.json", {}) or {}  # tech + missing headers
@@ -170,7 +171,7 @@ async def collect_findings() -> dict:
 @mcp.tool()
 async def validate_finding(finding_id: str, validated: bool = True,
                            confidence: str = "confirmed",
-                           rationale: str = "") -> dict:
+                           rationale: str = "", project: str = "") -> dict:
     """Record the validation gate's verdict on a finding.
 
     The brain *is* the validation gate: after judging whether a
@@ -188,6 +189,7 @@ async def validate_finding(finding_id: str, validated: bool = True,
     Returns:
         The updated finding, or an error if the id isn't found.
     """
+    workspace.use_project(project)
     items = findings.load_findings()
     for f in items:
         if f.get("id") == finding_id:

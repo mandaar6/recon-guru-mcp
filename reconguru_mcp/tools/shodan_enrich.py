@@ -71,7 +71,7 @@ async def _shodan_host(client: httpx.AsyncClient, ip: str, key: str) -> dict:
 
 @mcp.tool()
 async def shodan_enrich(target: str = "", source_file: str = SOURCE_DEFAULT,
-                        max_hosts: int = 20) -> dict:
+                        max_hosts: int = 20, project: str = "") -> dict:
     """Enrich hosts with Shodan's passively-collected scan data.
 
     Args:
@@ -95,6 +95,7 @@ async def shodan_enrich(target: str = "", source_file: str = SOURCE_DEFAULT,
             "error": "no Shodan API key configured — set RECONGURU_SHODAN_API_KEY to use this tool",
         }
 
+    workspace.use_project(project, target)
     if target.strip():
         raw_hosts = [h.strip() for h in target.split(",") if h.strip()]
     else:

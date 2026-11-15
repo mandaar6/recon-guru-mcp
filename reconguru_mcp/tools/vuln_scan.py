@@ -69,7 +69,7 @@ async def run_nuclei(hosts: list[str], *, severity: str = "", tags: str = "",
 
 @mcp.tool()
 async def vuln_scan(target: str = "", source_file: str = SOURCE_DEFAULT,
-                    severity: str = "", tags: str = "", auth: str = "") -> dict:
+                    severity: str = "", tags: str = "", auth: str = "", project: str = "") -> dict:
     """Scan live hosts for known vulnerabilities and exposures (nuclei).
 
     Args:
@@ -86,6 +86,7 @@ async def vuln_scan(target: str = "", source_file: str = SOURCE_DEFAULT,
         An envelope: total matches, counts by severity, the top findings, and
         the output file path. Full detail → nuclei.json (feeds collect_findings).
     """
+    workspace.use_project(project, target)
     if target.strip():
         raw = [h.strip() for h in target.split(",") if h.strip()]
     else:

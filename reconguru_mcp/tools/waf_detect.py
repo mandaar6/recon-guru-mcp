@@ -18,7 +18,7 @@ TMP_OUT = "_wafw00f_out.json"
 
 
 @mcp.tool()
-async def waf_detect(target: str) -> dict:
+async def waf_detect(target: str, project: str = "") -> dict:
     """Detect the WAF/CDN protecting a host (wafw00f).
 
     Args:
@@ -28,6 +28,7 @@ async def waf_detect(target: str) -> dict:
         An envelope: whether a WAF was detected and its name, plus the output
         file path. Detail is written to waf.json.
     """
+    workspace.use_project(project, target)
     try:
         host = validate_target(target.split("://", 1)[-1].split("/", 1)[0])
     except InvalidTarget as e:

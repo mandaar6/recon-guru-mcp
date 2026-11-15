@@ -238,9 +238,26 @@ echo '*.example.com' > ./workspace/scope_include.txt
 
 This is the **recommended** config — it includes the least-privilege flags from
 [Run it hardened](#run-it-hardened) below, so you're sandboxed by default. Now
-`report.html`, `findings.json`, and every tool's output land in your
-`./workspace` folder, and you edit `.env` / scope files any time by just editing
-them on your host and restarting the harness session.
+every scan's output lands in a **per-target subfolder** of your `./workspace`,
+and you edit `.env` / scope files any time by just editing them on your host and
+restarting the harness session.
+
+**Per-target layout.** Each target you scan gets its own folder, so two targets
+never overwrite each other. Tools accept an optional `project` argument (normally
+the root domain) that names the folder; pass the same one across a scan, or let
+it derive from the target:
+
+```
+workspace/
+├── scope_include.txt        # GLOBAL scope (applies to every target)
+├── scope_exclude.txt
+├── example.com/             # one folder per target
+│   ├── subdomains.txt  live_hosts.txt  urls.txt  ports.json  http_probe.json
+│   ├── findings.json   report.html
+│   └── scope_include.txt    # OPTIONAL per-target scope (added to the global one)
+└── another-target.com/
+    └── …
+```
 
 > **On scope and the agent (FAQ):** scope files *constrain what gets scanned* —
 > they don't automatically make the agent skip steps. But the server's

@@ -122,7 +122,7 @@ def _parse_line(line: str) -> dict | None:
 
 @mcp.tool()
 async def http_probe(target: str = "", source_file: str = SOURCE_DEFAULT,
-                     auth: str = "") -> dict:
+                     auth: str = "", project: str = "") -> dict:
     """Probe hosts over HTTP(S) with httpx: liveness, tech, headers, dedup.
 
     One fast pass per host returns status + class bucket, title, web server,
@@ -145,6 +145,7 @@ async def http_probe(target: str = "", source_file: str = SOURCE_DEFAULT,
         duplicate groups, a tech summary, total missing-header findings, a
         sample, and the output file paths.
     """
+    workspace.use_project(project, target)
     if target.strip():
         raw_hosts = [h.strip() for h in target.split(",") if h.strip()]
     else:

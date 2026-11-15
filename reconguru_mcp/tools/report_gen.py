@@ -261,7 +261,7 @@ code{{font-family:'Courier New',monospace;font-size:.78rem;word-break:break-all}
 
 
 @mcp.tool()
-async def report_gen(target: str = "", output_file: str = OUT_DEFAULT) -> dict:
+async def report_gen(target: str = "", output_file: str = OUT_DEFAULT, project: str = "") -> dict:
     """Render a self-contained HTML report from the current workspace data.
 
     Reads whichever canonical files exist (subdomains.txt, live_probe.json,
@@ -277,6 +277,7 @@ async def report_gen(target: str = "", output_file: str = OUT_DEFAULT) -> dict:
         An envelope: the output path, a stats summary, and which data files
         were present.
     """
+    workspace.use_project(project, target)
     data = _load()
     present = [
         name
