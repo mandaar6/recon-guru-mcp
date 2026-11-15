@@ -26,18 +26,43 @@ Requires **Docker** (nothing else — all tool binaries are baked into the image
 ```bash
 git clone https://github.com/mandaar6/recon-guru-mcp.git
 cd recon-guru-mcp
+```
+
+### Recommended: run the setup script
+
+One interactive command does everything — builds the image, asks where you want
+your **workspace folder** (scope lists in, results out), creates your `.env`
+(optionally collecting API keys), and wires your harness:
+
+```bash
+./setup.sh          # macOS / Linux / WSL
+```
+```powershell
+.\setup.ps1         # Windows PowerShell
+```
+
+It asks which harness you use (Claude Code / Claude Desktop / Cursor / Codex /
+other) and either configures it for you or prints the exact, path-filled config
+to paste. When it finishes you can start a new harness session and scan — skip
+straight to the ["ask it in plain language"](#just-start-a-session-and-ask) part
+below.
+
+<details>
+<summary><b>Prefer to wire it up by hand?</b> (or just want to see what the script does)</summary>
+
+Build the image, then register it with your harness.
+
+```bash
 docker build -t reconguru-mcp:latest .
 ```
 
-Now tell your harness the container exists. **Claude Code can do this for you in
-one command** (no file to find or edit) — run it in the folder where you want
-reconguru available:
+**Claude Code** can register it in one command (no file to find or edit):
 
 ```bash
 claude mcp add reconguru -- docker run -i --rm -v reconguru-workspace:/workspace reconguru-mcp:latest
 ```
 
-Prefer to edit the config by hand (or use a different harness)? Add this block:
+Any other harness takes the same thing as a config block:
 
 ```json
 {
@@ -60,16 +85,29 @@ Prefer to edit the config by hand (or use a different harness)? Add this block:
 | Claude Code (global) | managed by `claude mcp add` | `~/.claude.json` |
 | Claude Desktop (macOS) | `claude_desktop_config.json` | `~/Library/Application Support/Claude/` |
 | Claude Desktop (Windows) | `claude_desktop_config.json` | `%APPDATA%\Claude\` |
+| Cursor | `.cursor/mcp.json` | your project (same JSON shape) |
+| Codex | `~/.codex/config.toml` | **TOML**, not JSON — same command + args |
+
+The docker `command` + `args` are identical everywhere; only the file's **format
+and location** differ, which is exactly the tedium the setup script removes.
 
 > **Why not just *ask* the harness to configure itself?** It can't: a harness can
 > only call a server it already knows about, and it doesn't know about reconguru
-> until this entry exists — a chicken-and-egg. `claude mcp add` is the automation:
-> it writes that entry for you, then every new session picks it up.
+> until this entry exists — a chicken-and-egg. `claude mcp add` (and the setup
+> script) is the automation that writes the entry; then every new session picks
+> it up.
+
+For real scope + results on disk, use the fuller config under
+[Configuration & scope](#configuration--scope) instead of the bare example above
+(the script writes that one for you).
+
+</details>
 
 That's the whole install — no package to install into the harness, no separate
 service to start. Once the entry is there, your harness **launches the container
-itself** over stdio and discovers the tools automatically. Just start a new
-session and ask, in plain language:
+itself** over stdio and discovers the tools automatically.
+
+### Just start a session and ask
 
 > *"Use reconguru to recon example.com — enumerate subdomains, probe which are
 > live, scan the live hosts, and give me a ranked findings report."*
@@ -122,6 +160,23 @@ output — and `report_gen` leads with it.
 ---
 
 ## Configuration & scope
+
+> **Does the container get heavy as you scan? No.** Three different things, often
+> confused:
+> - the **image** (`reconguru-mcp:latest`) is read-only and fixed-size — scans
+>   never change it;
+> - a **container** is one run of that image; in stdio mode your harness starts a
+>   fresh one per session and `--rm` deletes it on exit, so nothing piles up;
+> - **`/workspace`** is where results actually land, and *you* choose where that
+>   is with `-v`. A **host folder** (`-v /my/folder:/workspace`) keeps results on
+>   your disk, visible and editable. A **named volume**
+>   (`reconguru-workspace:/workspace`) is Docker-managed and grows on your host
+>   disk, but it's awkward to open and `--rm` with no `-v` at all means results
+>   **vanish on exit**.
+>
+> So the image never swells; pick a **host folder** so scope files and reports are
+> yours and persistent. The [setup script](#recommended-run-the-setup-script) does
+> this for you — everything below is what it automates.
 
 **You never edit files *inside* the container** (no `docker exec`, no SSH). You
 create two things **on your own machine** and hand them to the container when it
