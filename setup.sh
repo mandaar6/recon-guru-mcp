@@ -89,10 +89,12 @@ else
     [Yy]*)
       {
         printf '\n# --- keys added by setup (%s) ---\n' "$(date -u +%FT%TZ 2>/dev/null || date)"
-        while IFS='|' read -r var label; do
+        # Read the key list on fd 3 so `ask` (which reads real stdin on fd 0)
+        # doesn't swallow these lines instead of the user's typed value.
+        while IFS='|' read -r var label <&3; do
           val="$(ask "  $label (Enter to skip)" "")"
           [ -n "$val" ] && printf 'RECONGURU_%s=%s\n' "$var" "$val"
-        done <<'KEYS'
+        done 3<<'KEYS'
 SHODAN_API_KEY|Shodan
 VIRUSTOTAL_API_KEY|VirusTotal
 SECURITYTRAILS_API_KEY|SecurityTrails
