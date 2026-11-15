@@ -45,13 +45,23 @@ Point your harness at it (e.g. `.mcp.json` for Claude Code, or
 }
 ```
 
-Start a new harness session and ask, in plain language:
+That's the whole install — no package to install into the harness, no separate
+service to start. Once the `.mcp.json` entry is there, your harness **launches the
+container itself** over stdio and discovers the tools automatically. Just start a
+new session and ask, in plain language:
 
 > *"Use reconguru to recon example.com — enumerate subdomains, probe which are
 > live, scan the live hosts, and give me a ranked findings report."*
 
 The harness's LLM calls the tools in order, each writing to a shared workspace,
 and `report_gen` renders a self-contained HTML report.
+
+**Not sure what to ask?** The server tells your harness its capabilities
+automatically (so the brain knows how to drive it), and you can run the built-in
+**`recon_help`** prompt — e.g. `/reconguru:recon_help` in Claude Code — for a menu
+of what it does and example asks. If your request is vague, the agent will offer
+you options (subdomain discovery / liveness probe / port scan / vuln scan / the
+full chain) before it starts.
 
 ---
 
@@ -90,30 +100,73 @@ output — and `report_gen` leads with it.
 
 ---
 
-## Configuration
+## Configuration & scope
 
-Everything tunable lives in environment variables / a git-ignored `.env`
-(copy `.env.example`). No code edits. All variables are namespaced `RECONGURU_`.
+**You never edit files *inside* the container** (no `docker exec`, no SSH). You
+create two things **on your own machine** and hand them to the container when it
+starts:
+
+**1. `.env` — settings & API keys** (copy `.env.example`, all vars are
+`RECONGURU_`-namespaced):
 
 ```bash
-cp .env.example .env    # then edit
-docker run -i --rm --env-file .env -v reconguru-workspace:/workspace reconguru-mcp:latest
+cp .env.example .env    # then edit on your host
 ```
 
-Highlights (see `.env.example` for the full list):
-
 - **API keys** (blank = that source is skipped): Shodan, VirusTotal,
-  SecurityTrails, URLScan, Censys, GitHub, Chaos, NVD.
-- **Timeouts** (global + per-tool, e.g. `RECONGURU_TIMEOUT_NUCLEI`), concurrency,
+  SecurityTrails, URLScan, Censys, GitHub, Chaos, NVD (an NVD key makes
+  `exploit_lookup` much more useful).
+- Timeouts (global + per-tool, e.g. `RECONGURU_TIMEOUT_NUCLEI`), concurrency,
   rate-limit, stealth, user-agent, wordlist paths.
 - **Authenticated recon:** `RECONGURU_AUTH_HEADER` (or a tool's `auth` argument)
   injects a session you captured yourself — the toolkit **never logs in for you**.
-- **Scope:** drop `scope_include.txt` / `scope_exclude.txt` in the workspace
-  (patterns like `*.example.com`, `192.0.2.0/24`) to allow/deny targets.
+
+**2. Scope files — what's in/out of bounds.** Put `scope_include.txt` and/or
+`scope_exclude.txt` in a **host folder you bind-mount as the workspace**, one
+pattern per line (`example.com`, `*.example.com`, `192.0.2.0/24`). Discovery tools
+filter their output to in-scope hosts; active tools refuse out-of-scope targets.
+
+**Wire both into the run** by bind-mounting a host folder as `/workspace` (so your
+scope files go in and the reports/findings come back out) and passing `--env-file`:
+
+```bash
+mkdir -p ./workspace
+echo '*.example.com' > ./workspace/scope_include.txt
+```
+
+```json
+{
+  "mcpServers": {
+    "reconguru": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm",
+               "--env-file", "/abs/path/to/recon-guru-mcp/.env",
+               "-v", "/abs/path/to/recon-guru-mcp/workspace:/workspace",
+               "reconguru-mcp:latest"]
+    }
+  }
+}
+```
+
+Now `report.html`, `findings.json`, and every tool's output land in your
+`./workspace` folder, and you edit `.env` / scope files any time by just editing
+them on your host and restarting the harness session.
+
+> **On scope and the agent (FAQ):** scope files *constrain what gets scanned* —
+> they don't automatically make the agent skip steps. But the server's
+> instructions tell the brain that **if you've pre-listed specific in-scope hosts,
+> it should skip `subdomain_enum`/`dns_enum` and go straight to probing them.** So
+> a capable harness will do the right thing; it's guidance, not a hard rule.
 
 ---
 
 ## Run it hardened
+
+The quickstart run is fine for local use. For heavier scanning, untrusted
+targets, or a shared machine, run the container **least-privilege** — as a
+non-root user, with no Linux capabilities, no privilege escalation, and capped
+CPU/memory/process count so a runaway scan can't starve or harm the host. Same
+image, just extra `docker run` flags:
 
 ```bash
 docker run -i --rm \
@@ -244,9 +297,11 @@ reconguru-mcp's tools at runtime.
 
 ## Status & roadmap
 
-Stages 1–7 and 9 are complete (framework → Docker → tool suite → findings model →
-hardening); Stage 10 (packaging) is in progress. Full detail, design decisions,
-and the tiered tool catalog are in **[ROADMAP.md](ROADMAP.md)**.
+**Complete.** All build stages are done — framework → Docker sandbox → the 18-tool
+suite → findings model → authenticated recon → hardening → packaging. (A planned
+"methodology skills" stage was intentionally folded into *optional external
+skills* rather than built in — see the section above.) Full detail, design
+decisions, and the tiered tool catalog are in **[ROADMAP.md](ROADMAP.md)**.
 
 ### Does the brain actually help?
 

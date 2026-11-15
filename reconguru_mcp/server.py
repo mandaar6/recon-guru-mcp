@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import sys
 
+from . import prompts  # noqa: F401 — registers the recon_help prompt
 from .app import mcp
 from .config import settings
 from .linter import lint_mcp
